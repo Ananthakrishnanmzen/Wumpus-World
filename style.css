@@ -86,3 +86,25 @@ button {
     align-items: center; justify-content: center;
     box-shadow: 0 0 15px var(--neon-blue);
 }
+
+/* Add these new styles to your existing CSS */
+
+.btn-shoot {
+    background: #f97316; /* Vibrant Orange */
+    color: white;
+    width: 100%; padding: 12px; margin-top: 10px; border: none;
+    border-radius: 8px; cursor: pointer; font-weight: bold;
+}
+
+.btn-shoot:hover { background: #ea580c; }
+
+.btn-shoot.disabled {
+    background: #475569;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.fa-skull-crossbones {
+    color: #94a3b8; /* Faded grey for the dead monster */
+}
+
