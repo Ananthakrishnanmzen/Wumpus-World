@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wumpus World AI Pro</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <header>
+            <h1>Wumpus World <span>AI Solver</span></h1>
+        </header>
+        
+        <div class="main-layout">
+            <aside class="control-panel">
+                <h3>Architect Tools</h3>
+                <div class="tool-group">
+                    <input type="radio" name="tool" value="Wumpus" id="t-wumpus" checked>
+                    <label for="t-wumpus"><i class="fas fa-skull"></i> Wumpus</label>
+
+                    <input type="radio" name="tool" value="Pit" id="t-pit">
+                    <label for="t-pit"><i class="fas fa-circle-notch"></i> Pit</label>
+
+                    <input type="radio" name="tool" value="Gold" id="t-gold">
+                    <label for="t-gold"><i class="fas fa-trophy"></i> Gold</label>
+
+                    <input type="radio" name="tool" value="Clear" id="t-clear">
+                    <label for="t-clear"><i class="fas fa-eraser"></i> Clear</label>
+                </div>
+
+                <div class="action-group">
+                    <button id="runBtn" class="btn-primary">SOLVE PATH <i class="fas fa-play"></i></button>
+                    <button id="resetBtn" class="btn-secondary">RESET GRID</button>
+                </div>
+            </aside>
+
+            <main class="game-area">
+                <div id="grid-container" class="grid"></div>
+            </main>
+        </div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
