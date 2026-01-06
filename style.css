@@ -1,0 +1,88 @@
+:root {
+    --bg-dark: #0f172a;
+    --panel-bg: #1e293b;
+    --neon-blue: #38bdf8;
+    --neon-gold: #fbbf24;
+    --neon-red: #ef4444;
+}
+
+body {
+    background-color: var(--bg-dark);
+    color: white;
+    font-family: 'Segoe UI', sans-serif;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+}
+
+.app-container { width: 900px; padding: 20px; }
+h1 span { color: var(--neon-blue); font-size: 0.8em; }
+
+.main-layout { display: grid; grid-template-columns: 250px 1fr; gap: 30px; }
+
+/* Tool Panel */
+.control-panel {
+    background: var(--panel-bg);
+    padding: 20px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+.tool-group input { display: none; }
+.tool-group label {
+    display: block;
+    padding: 12px;
+    margin-bottom: 8px;
+    background: #334155;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+.tool-group input:checked + label {
+    background: var(--neon-blue);
+    color: var(--bg-dark);
+    font-weight: bold;
+}
+
+button {
+    width: 100%; padding: 12px; margin-top: 10px; border: none;
+    border-radius: 8px; cursor: pointer; font-weight: bold;
+}
+
+.btn-primary { background: #10b981; color: white; }
+.btn-secondary { background: #64748b; color: white; }
+
+/* Grid Styling */
+.grid {
+    display: grid;
+    grid-template-columns: repeat(4, 100px);
+    grid-template-rows: repeat(4, 100px);
+    gap: 8px;
+    background: #334155;
+    padding: 10px;
+    border-radius: 8px;
+}
+
+.cell {
+    width: 100px; height: 100px;
+    background: var(--panel-bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    border-radius: 4px; position: relative;
+}
+
+.cell i { font-size: 2rem; margin-bottom: 5px; }
+.fa-skull { color: var(--neon-red); }
+.fa-circle-notch { color: #000; }
+.fa-trophy { color: var(--neon-gold); }
+
+.percept { font-size: 0.6rem; color: #94a3b8; font-style: italic; }
+
+.agent {
+    position: absolute; width: 50px; height: 50px;
+    background: var(--neon-blue); border-radius: 50%;
+    border: 3px solid white; display: flex;
+    align-items: center; justify-content: center;
+    box-shadow: 0 0 15px var(--neon-blue);
+}
