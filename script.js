@@ -1,4 +1,3 @@
- 
 // --- CONFIGURATION & STATE ---
 const GRID_SIZE = 4;
 let grid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(""));
@@ -17,13 +16,13 @@ function createGrid() {
             const cell = document.createElement('div');
             cell.className = 'cell';
 
-            // Render Hazards/Items
+            // Icons for hazards and items
             if (grid[r][c] === "Wumpus") cell.innerHTML = '<i class="fas fa-skull"></i>';
             if (grid[r][c] === "DeadWumpus") cell.innerHTML = '<i class="fas fa-skull-crossbones"></i>';
             if (grid[r][c] === "Pit") cell.innerHTML = '<i class="fas fa-circle-notch"></i>';
             if (grid[r][c] === "Gold") cell.innerHTML = '<i class="fas fa-trophy"></i>';
 
-            // Render Percepts (Stench/Breeze) - Only if tile is otherwise empty
+            // Sensory Percepts
             const percepts = getPercepts(r, c);
             if (percepts.length > 0 && !grid[r][c]) {
                 const pSpan = document.createElement('span');
@@ -32,7 +31,7 @@ function createGrid() {
                 cell.appendChild(pSpan);
             }
 
-            // Render Agent
+            // Agent Visualization
             if (agentPos.r === r && agentPos.c === c) {
                 const agent = document.createElement('div');
                 agent.className = 'agent';
@@ -40,12 +39,10 @@ function createGrid() {
                 cell.appendChild(agent);
             }
 
-            // Manual Placement via Click
             cell.onclick = () => {
                 const toolInput = document.querySelector('input[name="tool"]:checked');
                 if (toolInput) {
-                    const tool = toolInput.value;
-                    grid[r][c] = (tool === "Clear") ? "" : tool;
+                    grid[r][c] = (toolInput.value === "Clear") ? "" : toolInput.value;
                     createGrid();
                 }
             };
@@ -54,11 +51,10 @@ function createGrid() {
     }
 }
 
-// --- LOGIC HELPERS ---
+// --- PERCEPTION LOGIC ---
 function getPercepts(r, c) {
     let p = [];
-    const neighbors = [[0,1],[0,-1],[1,0],[-1,0]];
-    neighbors.forEach(([dr, dc]) => {
+    [[0,1],[0,-1],[1,0],[-1,0]].forEach(([dr, dc]) => {
         let nr = r + dr, nc = c + dc;
         if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE) {
             if (grid[nr][nc] === "Pit") p.push("Breeze");
@@ -68,16 +64,8 @@ function getPercepts(r, c) {
     return [...new Set(p)];
 }
 
-function checkWumpus(r, c) {
-    if (grid[r][c] === "Wumpus") {
-        grid[r][c] = "DeadWumpus";
-        return true;
-    }
-    return false;
-}
-
-// --- SHOOTING SYSTEM ---
-function executeShoot(dir, isAuto = false) {
+// --- COMBAT LOGIC ---
+function executeShoot(dir) {
     if (!hasArrow) return;
     hasArrow = false;
     document.getElementById('shootBtn').disabled = true;
@@ -86,34 +74,38 @@ function executeShoot(dir, isAuto = false) {
     let hit = false;
     let { r, c } = agentPos;
 
-    if (dir === "up") for(let i = r-1; i >= 0; i--) if(checkWumpus(i, c)) hit = true;
-    if (dir === "down") for(let i = r+1; i < GRID_SIZE; i++) if(checkWumpus(i, c)) hit = true;
-    if (dir === "left") for(let i = c-1; i >= 0; i--) if(checkWumpus(r, i)) hit = true;
-    if (dir === "right") for(let i = c+1; i < GRID_SIZE; i++) if(checkWumpus(r, i)) hit = true;
+    const checkKill = (nr, nc) => {
+        if (grid[nr][nc] === "Wumpus") {
+            grid[nr][nc] = "DeadWumpus";
+            hit = true;
+        }
+    };
 
-    if (hit) {
-        alert(isAuto ? "🎯 AI Tactical Shot: Wumpus Slain!" : "🎯 A scream echoes... The Wumpus is dead!");
-    } else if (!isAuto) {
-        alert("🏹 The arrow hits the wall.");
-    }
+    if (dir === "up") for(let i = r-1; i >= 0; i--) checkKill(i, c);
+    if (dir === "down") for(let i = r+1; i < GRID_SIZE; i++) checkKill(i, c);
+    if (dir === "left") for(let i = c-1; i >= 0; i--) checkKill(r, i);
+    if (dir === "right") for(let i = c+1; i < GRID_SIZE; i++) checkKill(r, i);
+
+    if (hit) alert("🎯 A blood-curdling scream echoes... The Wumpus is dead!");
+    else alert("🏹 The arrow clattered uselessly against a wall.");
     createGrid();
 }
 
-// --- AI NAVIGATION (BFS) ---
-async function findPath(start, targetCoords, avoidList) {
+// --- ADVANCED PATHFINDING (BFS) ---
+async function findPath(start, target, avoidList) {
     let queue = [{ r: start.r, c: start.c, path: [] }];
     let visited = new Set([`${start.r},${start.c}`]);
 
     while (queue.length > 0) {
         let { r, c, path } = queue.shift();
-        if (r === targetCoords.r && c === targetCoords.c) return path;
+        if (r === target.r && c === target.c) return path;
 
         for (let [dr, dc] of [[0,1],[0,-1],[1,0],[-1,0]]) {
             let nr = r + dr, nc = c + dc;
             if (nr >= 0 && nr < GRID_SIZE && nc >= 0 && nc < GRID_SIZE && !visited.has(`${nr},${nc}`)) {
-                let cellContent = grid[nr][nc];
-                // Safe if it's the target OR not in the avoid list
-                if (nr === targetCoords.r && nc === targetCoords.c || !avoidList.includes(cellContent)) {
+                let cellType = grid[nr][nc];
+                // A cell is safe if it's the target OR not in the avoidList
+                if (!avoidList.includes(cellType) || (nr === target.r && nc === target.c)) {
                     visited.add(`${nr},${nc}`);
                     queue.push({ r: nr, c: nc, path: [...path, {r, c}] });
                 }
@@ -123,124 +115,73 @@ async function findPath(start, targetCoords, avoidList) {
     return null;
 }
 
-// --- BUTTON HANDLERS ---
-document.getElementById('shootBtn').onclick = () => {
-    const direction = prompt("Shoot Arrow! (up, down, left, right)");
-    if (direction) executeShoot(direction.toLowerCase());
-};
-
-document.getElementById('resetBtn').onclick = () => {
-    grid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(""));
-    agentPos = { r: 3, c: 0 };
-    hasArrow = true;
-    document.getElementById('shootBtn').disabled = false;
-    document.getElementById('arrowCount').textContent = "1";
-    createGrid();
-};
-
+// --- AI SOLVER ---
 document.getElementById('runBtn').onclick = async () => {
-    // Phase 1: Hunt Wumpus if it exists
-    if (hasArrow) {
-        let wumpusPos = null;
-        grid.forEach((row, r) => row.forEach((val, c) => { if(val === "Wumpus") wumpusPos = {r, c}; }));
+    const findObj = (val) => {
+        for(let r=0; r<GRID_SIZE; r++) 
+            for(let c=0; c<GRID_SIZE; c++) 
+                if(grid[r][c] === val) return {r, c};
+        return null;
+    };
 
-        if (wumpusPos) {
-            const pathToWumpus = await findPath(agentPos, wumpusPos, ["Wumpus", "Pit"]);
-            if (pathToWumpus) {
-                for (let pos of pathToWumpus) {
-                    agentPos = pos;
-                    createGrid();
-                    await new Promise(res => setTimeout(res, 300));
-                }
-                let dr = wumpusPos.r - agentPos.r, dc = wumpusPos.c - agentPos.c;
-                let dir = dr < 0 ? "up" : dr > 0 ? "down" : dc < 0 ? "left" : "right";
-                executeShoot(dir, true);
-                await new Promise(res => setTimeout(res, 500));
-            }
-        }
-    }
-
-    // Phase 2: Go to Gold
-    let goldPos = null;
-    grid.forEach((row, r) => row.forEach((val, c) => { if(val === "Gold") goldPos = {r, c}; }));
-
-    if (goldPos) {
-        const finalPath = await findPath(agentPos, goldPos, ["Wumpus", "Pit"]);
-        if (finalPath) {
-            for (let pos of [...finalPath, goldPos]) {
-                agentPos = pos;
-                createGrid();
-                await new Promise(res => setTimeout(res, 300));
-            }
-            alert("💰 VICTORY! Gold Recovered!");
-        } else {
-            alert("❌ No safe path to the gold!");
-        }
-    }
-};
-
-document.getElementById('runBtn').onclick = async () => {
-    // Phase 1: Hunt the Wumpus (Only if it's in the way)
-    if (hasArrow) {
-        let wumpusLoc = null;
-        grid.forEach((row, r) => row.forEach((cell, c) => { if(cell === "Wumpus") wumpusLoc = {r, c}; }));
-
-        if (wumpusLoc) {
-            let pathToShoot = await findPath(agentPos, wumpusLoc, ["Pit", "Wumpus"]);
-            if (pathToShoot) {
-                for (let pos of pathToShoot) {
-                    agentPos = pos;
-                    createGrid();
-                    await new Promise(res => setTimeout(res, 300));
-                }
-                let dr = wumpusLoc.r - agentPos.r, dc = wumpusLoc.c - agentPos.c;
-                let dir = dr < 0 ? "up" : dr > 0 ? "down" : dc < 0 ? "left" : "right";
-                executeShoot(dir, true);
-                await new Promise(res => setTimeout(res, 500));
-            }
-        }
-    }
-
-    // Phase 2: Secure the Gold
-    let goldLoc = null;
-    grid.forEach((row, r) => row.forEach((cell, c) => { if(cell === "Gold") goldLoc = {r, c}; }));
-
-    if (goldLoc) {
-        let pathToGold = await findPath(agentPos, goldLoc, ["Pit", "Wumpus"]);
-        if (pathToGold) {
-            for (let pos of [...pathToGold, goldLoc]) {
-                agentPos = pos;
-                createGrid();
-                await new Promise(res => setTimeout(res, 300));
-            }
-            alert("💰 Gold Secured! Now returning to start...");
-            await new Promise(res => setTimeout(res, 500));
-        } else {
-            return alert("❌ MISSION FAILED: No safe path to the gold.");
-        }
-    }
-
-    // Phase 3: Return to Starting Point (3,0)
+    const goldLoc = findObj("Gold");
+    const wumpusLoc = findObj("Wumpus");
     const startLoc = { r: 3, c: 0 };
-    // If agent is already at start, mission is over
-    if (agentPos.r === startLoc.r && agentPos.c === startLoc.c) {
-        return alert("🏆 Mission Accomplished! You are already at the exit.");
+
+    if (!goldLoc) return alert("Please place the Gold first!");
+
+    // Step 1: Attempt to find a path to the Gold
+    let path = await findPath(agentPos, goldLoc, ["Pit", "Wumpus"]);
+
+    // Step 2: Tactical Shooting (If path is blocked by Wumpus)
+    if (!path && hasArrow && wumpusLoc) {
+        // Find path to a cell adjacent to the Wumpus
+        let shootPath = await findPath(agentPos, wumpusLoc, ["Pit", "Wumpus"]);
+        if (shootPath) {
+            for (let pos of shootPath) {
+                agentPos = pos;
+                createGrid();
+                await new Promise(res => setTimeout(res, 400));
+            }
+            // Shoot the Wumpus
+            let dr = wumpusLoc.r - agentPos.r, dc = wumpusLoc.c - agentPos.c;
+            let dir = dr < 0 ? "up" : dr > 0 ? "down" : dc < 0 ? "left" : "right";
+            executeShoot(dir);
+            // Re-calculate path now that Wumpus is "DeadWumpus" (safe)
+            path = await findPath(agentPos, goldLoc, ["Pit", "Wumpus"]);
+        }
     }
 
-    let returnPath = await findPath(agentPos, startLoc, ["Pit", "Wumpus"]);
-    if (returnPath) {
-        for (let pos of [...returnPath, startLoc]) {
+    // Step 3: Move to Gold
+    if (path) {
+        for (let pos of [...path, goldLoc]) {
             agentPos = pos;
             createGrid();
-            await new Promise(res => setTimeout(res, 300));
+            await new Promise(res => setTimeout(res, 400));
         }
-        alert("🏠 Safe at Home! Total Victory!");
+        alert("💰 Gold Recovered! Returning to exit...");
+        
+        // Step 4: Safely Return to Start
+        let returnPath = await findPath(agentPos, startLoc, ["Pit", "Wumpus"]);
+        if (returnPath) {
+            for (let pos of [...returnPath, startLoc]) {
+                agentPos = pos;
+                createGrid();
+                await new Promise(res => setTimeout(res, 400));
+            }
+            alert("🏠 Mission Complete! Safe at the exit.");
+        } else {
+            alert("⚠️ Warning: Gold secured but no safe path back to exit!");
+        }
     } else {
-        alert("⚠️ Trapped! Gold secured but no safe way back to the exit!");
+        alert("❌ Impossible: No safe path to the gold.");
     }
 };
 
+document.getElementById('resetBtn').onclick = () => location.reload();
+document.getElementById('shootBtn').onclick = () => {
+    const d = prompt("Shoot arrow (up, down, left, right):");
+    if(d) executeShoot(d.toLowerCase());
+};
 
-// Start
 createGrid();
-
